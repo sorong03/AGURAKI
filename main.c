@@ -1,10 +1,12 @@
 #include "mylib.h"
 #include "text.h"
+#include "Space.h"
 #include <stdlib.h>
 #include <stdio.h>
 
 #define NUMOBJS 8
 #define MAXHEIGHT 149
+
 int splash();
 int controls();
 void win();
@@ -47,13 +49,14 @@ int main(void)
 int splash()
 {
 	int seed = 0;
-	u16 *ptr = videoBuffer;
+	//u16 *ptr = videoBuffer;
 	REG_DISPCNT = MODE3 | BG2_ENABLE;
-	int i;
+	/*int i;
 	for(i=0; i<38400; i++)
 	{
 		*ptr++ = RED;
-	}
+	}*/
+	drawPicture(SpaceBitmap);
 	drawString(70, 100, "AGURAKI", CYAN);
 	drawString(80, 90, "Press Start", CYAN);
 	while(!KEY_DOWN_NOW(BUTTON_START))
@@ -67,13 +70,8 @@ int splash()
 int controls()
 {
 	int seed = 0;
-	u16 *ptr = videoBuffer;
 	REG_DISPCNT = MODE3 | BG2_ENABLE;
-	int i;
-	for(i=0; i<38400; i++)
-	{
-		*ptr++ = BLACK;
-	}
+	fillScreen(BLACK);
 	drawString(5, 85, "HOW TO PLAY", YELLOW);
 	drawString(20, 5, "You take control of a Hollow Rectang-", YELLOW);
 	drawString(30, 5, "ular Ship and are trying to harvest", YELLOW);
@@ -81,7 +79,7 @@ int controls()
 	drawString(50, 5, "You can harvest energy by switching", YELLOW);
 	drawString(60, 5, "to the same color of the meteorite ", YELLOW);
 	drawString(70, 5, "and colliding with them. However, you", YELLOW);
-	drawString(80, 5, "will lose if you collide with a meteo-", YELLOW);
+	drawString(80, 5, "will die if you collide with a meteo-", YELLOW);
 	drawString(90, 5, "rite of a different color.", YELLOW);
 	drawString(110, 90, "CONTROLS", YELLOW);
 	drawString(120, 5, "Up, Down, Left, Right - Move ship", YELLOW);
@@ -96,12 +94,7 @@ int controls()
 }
 void win()
 {
-    	int i;
-	u16 *ptr = videoBuffer;
-	for(i=0; i<38400; i++)
-	{
-		*ptr++ = BLUE;
-	}
+    	fillScreen(BLUE);
 	drawString(10, 90, "YOU WIN!", YELLOW);
 	drawString(30, 5, "You are now the strongest and baddest", YELLOW);
 	drawString(40, 4, "hollow rectangular ship there ever was", YELLOW);
@@ -111,12 +104,7 @@ void win()
 }
 void lose()
 {
-	u16 *ptr = videoBuffer;
-	int i;
-	for(i=0; i<38400; i++)
-	{
-		*ptr++ = RED;
-	}
+	fillScreen(RED);
 	drawString(10, 90, "YOU LOST!", BLACK);
 	drawString(30, 5, "You weren't able to complete your", BLACK);
 	drawString(40, 13, "mission, try again next time.", BLACK);
@@ -128,14 +116,10 @@ void lose()
 int game(int seed)
 {
 	REG_DISPCNT = MODE3 | BG2_ENABLE;
+	//fillScreen(BLACK);
 	int i;
-	u16 *ptr = videoBuffer;
-	for(i=0; i<38400; i++)
-	{
-		*ptr++ = BLACK;
-	}
-
 	char buffer[41];
+	char buffer2[41];
 	MAINRECT hero;
 	MAINRECT oldhero;
 	MAINRECT *herocur;
@@ -148,8 +132,9 @@ int game(int seed)
 	int score = 0;
 	int herosize = 4;
 	int size = 5;
+	int lives = 5;
 	hero.size = herosize;
-	hero.row = 140;
+	hero.row = 145;
 	hero.col = 120;
 	hero.color = RED;
 	oldhero = hero;
@@ -181,8 +166,13 @@ int game(int seed)
 		blueMeteors[i].alive = 1;
 		oldBlueMeteors[i] = blueMeteors[i];
 	}
+	drawPicture(SpaceBitmap);
 	while(1)
 	{
+		if(KEY_DOWN_NOW(BUTTON_SELECT))
+		{
+			return SPLASH;
+		}
 		if(KEY_DOWN_NOW(BUTTON_UP))
 		{
 			herocur-> row -= 2;
@@ -261,6 +251,10 @@ int game(int seed)
 			     redCur-> col > hero.col + hero.size || redCur -> col + redCur->size < hero.col)
 			     && redCur->color != hero.color && redCur-> alive == 1)
 			{
+				lives--;
+				hero.row = 145;
+				hero.col = 120;
+				if(lives <= 0)
 				return LOSE;
 			}
 	
@@ -303,21 +297,29 @@ int game(int seed)
 			     blueCur-> col > hero.col + hero.size || blueCur -> col + blueCur->size < hero.col)
 			     && blueCur->color != hero.color && blueCur->alive == 1)
 			{
+				lives--;
+				hero.row = 145;
+				hero.col = 120;
+				if(lives <= 0)
 				return LOSE;
 			}
 		}
 		sprintf(buffer, "Score: %d", score);
+		sprintf(buffer2, "Lives: %d", lives);
 		waitForVblank();
 		drawRect(150, 5, 10, 72, BLACK);
 		drawString(150, 5, buffer, MAGENTA);
+		drawRect(150, 160, 10, 72, BLACK);
+		drawString(150, 180, buffer2, YELLOW);
 		herocur = &hero;
-		drawHollowRect(oldhero.row, oldhero.col, oldhero.size, oldhero.size, BLACK);
+		//drawHollowRect(oldhero.row, oldhero.col, oldhero.size, oldhero.size, BLACK);
+		drawImage3(oldhero.row,oldhero.col,oldhero.size,oldhero.size, SpaceBitmap);
 		drawHollowRect(herocur->row, herocur->col, herocur->size, herocur->size, herocur->color);
 		oldhero = hero;
 		for(i=0; i<NUMOBJS; i++)
 		{	
 			if(oldRedMeteors[i].alive == 1)
-			drawRect(oldRedMeteors[i].row, oldRedMeteors[i].col, size, size, BLACK);
+			drawImage3(oldRedMeteors[i].row, oldRedMeteors[i].col, size, size, SpaceBitmap);
 		}
 		for(i=0; i<NUMOBJS; i++)
 		{
@@ -330,7 +332,7 @@ int game(int seed)
 		for(i=0; i<NUMOBJS; i++)
 		{
 			if(oldBlueMeteors[i].alive == 1)
-			drawRect(oldBlueMeteors[i].row, oldBlueMeteors[i].col, size, size, BLACK);
+			drawImage3(oldBlueMeteors[i].row, oldBlueMeteors[i].col, size, size, SpaceBitmap);
 		}
 		for(i=0; i<NUMOBJS; i++)
 		{
